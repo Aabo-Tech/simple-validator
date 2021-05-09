@@ -63,31 +63,53 @@ let Chaincode = class {
      * @param {Object} args initial arguments
      * @param {Class} thisClass verbatim
      */
-    async createVaccinationPassport(stub, args, thisClass) {
-        console.info(' --- Started createVaccinationPassport --- ')
-        let vaccinationCard = {}
+    async createPassport(stub, args, thisClass) {
+        console.info(' --- Started createPassport --- ')
+        let passport = {}
 
-        vaccinationCard.id = args[0]
+        passport.id = args[0]
         // Check if the vaccination card already exists
-        let vaccinationCardState = await stub.getState(vaccinationCard.id) 
+        let vaccinationCardState = await stub.getState(passport.id) 
         if (vaccinationCardState.toString()) {
             throw new Error(' --- Card already exists ---')
         }
-        vaccinationCard.firstName = args[1]
-        vaccinationCard.lastName = args[2]
-        vaccinationCard.dob = args[3]
-        vaccinationCard.s3URL = args[4]
-        vaccinationCard.patientNumber = args[5]
-        vaccinationCard.country = args[6]
-        vaccinationCard.validated = ValidationStatus.notValidated
+        passport.firstName = args[1]
+        passport.lastName = args[2]
+        passport.dob = args[3]
+        passport.s3URL = args[4]
+        passport.patientNumber = args[5]
+        passport.country = args[6]
+        passport.validated = ValidationStatus.notValidated
 
         // Save to state
-        await stub.putState(vaccinationCard.id, Buffer.from(JSON.stringify(vaccinationCard)))
+        await stub.putState(passport.id, Buffer.from(JSON.stringify(passport)))
         // Save an index for faster retrieval
         let indexName = 'country~id'
-        let countryIdIndexKey = await stub.createCompositeKey(indexName, [vaccinationCard.country, vaccinationCard.id])
+        let countryIdIndexKey = await stub.createCompositeKey(indexName, [passport.country, passport.id])
         await stub.putState(countryIdIndexKey, Buffer.from('\u0000'))
         console.info(' --- end createVaccinationPassport ---')
+    }
+
+    /**
+     * 
+     * @param {*} stub 
+     * @param {*} args 
+     * @param {*} thisClass 
+     */
+    async readPassport(stub, args, thisClass) {
+        // Input Validation
+        if(args.length != 1) {
+            throw new Error('Incorrect number of arguments, expecting ID')
+        }
+        // Get and Validate ID
+        let ID = args[0]
+        if (!ID) { throw new Error('ID must not be empty')}
+        // Query the ledger
+        let passportAsBytes = await stub.getState(ID)
+        if(!passportAsBytes.toString()) {
+            throw new Error('Passport does not exist')
+        }
+        return passportAsBytes
     }
 
 }
